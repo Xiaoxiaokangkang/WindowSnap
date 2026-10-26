@@ -1,0 +1,15 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run layout tests
+        run: ./run-tests.sh
+      - name: Build package
+        run: swift build -c release --product WindowSnap
