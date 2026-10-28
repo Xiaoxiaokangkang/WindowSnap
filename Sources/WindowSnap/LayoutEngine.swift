@@ -11,6 +11,7 @@ enum WindowAction: String, CaseIterable, Codable {
     case topLeft, topRight, bottomLeft, bottomRight
     case leftThird, centerThird, rightThird
     case maximize, center, restore, nextDisplay, previousDisplay
+    case four1, four2, four3, four4
     case five1, five2, five3, five4, five5
     case six1, six2, six3, six4, six5, six6
     case seven1, seven2, seven3, seven4, seven5, seven6, seven7
@@ -34,6 +35,10 @@ enum WindowAction: String, CaseIterable, Codable {
         case .restore: "恢复原尺寸"
         case .nextDisplay: "移到下一台显示器"
         case .previousDisplay: "移到上一台显示器"
+        case .four1: "4 分屏 · 第 1 列"
+        case .four2: "4 分屏 · 第 2 列"
+        case .four3: "4 分屏 · 第 3 列"
+        case .four4: "4 分屏 · 第 4 列"
         case .five1: "5 分屏 · 第 1 列"
         case .five2: "5 分屏 · 第 2 列"
         case .five3: "5 分屏 · 第 3 列"
@@ -66,6 +71,7 @@ enum WindowAction: String, CaseIterable, Codable {
     /// Zero-based column index and total column count for ultrawide layouts.
     var columnLayout: (index: Int, count: Int)? {
         switch self {
+        case .four1: (0, 4); case .four2: (1, 4); case .four3: (2, 4); case .four4: (3, 4)
         case .five1: (0, 5); case .five2: (1, 5); case .five3: (2, 5); case .five4: (3, 5); case .five5: (4, 5)
         case .six1: (0, 6); case .six2: (1, 6); case .six3: (2, 6); case .six4: (3, 6); case .six5: (4, 6); case .six6: (5, 6)
         case .seven1: (0, 7); case .seven2: (1, 7); case .seven3: (2, 7); case .seven4: (3, 7); case .seven5: (4, 7); case .seven6: (5, 7); case .seven7: (6, 7)

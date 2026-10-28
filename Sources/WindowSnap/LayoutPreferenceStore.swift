@@ -1,16 +1,18 @@
 import Foundation
 
 final class LayoutPreferenceStore {
+    static let supportedColumnCounts = Array(4...8)
+
     private let defaults = UserDefaults.standard
     private let key = "activeColumnCount.v1"
 
     var columnCount: Int {
         get {
             let saved = defaults.integer(forKey: key)
-            return (5...8).contains(saved) ? saved : 6
+            return Self.supportedColumnCounts.contains(saved) ? saved : 6
         }
         set {
-            guard (5...8).contains(newValue) else { return }
+            guard Self.supportedColumnCounts.contains(newValue) else { return }
             defaults.set(newValue, forKey: key)
         }
     }

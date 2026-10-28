@@ -28,6 +28,7 @@ struct LayoutEngineSelfTest {
 
         let ultrawide = CGRect(x: 0, y: 25, width: 5120, height: 1415)
         let groups: [[WindowAction]] = [
+            [.four1, .four2, .four3, .four4],
             [.five1, .five2, .five3, .five4, .five5],
             [.six1, .six2, .six3, .six4, .six5, .six6],
             [.seven1, .seven2, .seven3, .seven4, .seven5, .seven6, .seven7],
@@ -43,6 +44,9 @@ struct LayoutEngineSelfTest {
                 expect(frames[index - 1].maxX == frames[index].minX, "\(actions.count)-column boundary \(index)")
             }
         }
+        expect(WindowAction.column(index: 0, count: 4) == .four1, "4-column first action lookup")
+        expect(WindowAction.column(index: 3, count: 4) == .four4, "4-column last action lookup")
+        expect(WindowAction.column(index: 4, count: 4) == nil, "4-column out-of-range lookup")
 
         let exactTarget = CGRect(x: 640, y: 74, width: 640, height: 1336)
         expect(LayoutEngine.placementFits(target: exactTarget, actual: exactTarget), "exact placement fits")

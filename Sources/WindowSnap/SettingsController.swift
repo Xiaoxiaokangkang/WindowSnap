@@ -110,7 +110,7 @@ final class SettingsController: NSWindowController {
         scroll.widthAnchor.constraint(equalToConstant: 476).isActive = true
         root.addArrangedSubview(scroll)
 
-        let dragHint = NSTextField(wrappingLabelWithString: "超宽屏：点击菜单栏图标选择 5～8 列布局；拖动窗口时按住 Option 可显示分区浮层。若同时出现 macOS 自带拼贴，请在“系统设置 → 桌面与程序坞 → 窗口”中关闭按住 Option 拖移拼贴。")
+        let dragHint = NSTextField(wrappingLabelWithString: "超宽屏：点击菜单栏图标选择 4～8 列布局；拖动窗口时按住 Option 可显示分区浮层。若同时出现 macOS 自带拼贴，请在“系统设置 → 桌面与程序坞 → 窗口”中关闭按住 Option 拖移拼贴。")
         dragHint.textColor = .secondaryLabelColor
         dragHint.widthAnchor.constraint(equalToConstant: 476).isActive = true
         root.addArrangedSubview(dragHint)

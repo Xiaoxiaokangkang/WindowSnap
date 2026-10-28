@@ -45,8 +45,9 @@ final class LayoutPopoverController: NSViewController {
         titleLabel.font = .boldSystemFont(ofSize: 15)
         stack.addArrangedSubview(titleLabel)
 
-        layoutControl = NSSegmentedControl(labels: ["5 列", "6 列", "7 列", "8 列"], trackingMode: .selectOne, target: self, action: #selector(layoutChanged(_:)))
-        layoutControl.selectedSegment = preferences.columnCount - 5
+        let columnLabels = LayoutPreferenceStore.supportedColumnCounts.map { "\($0) 列" }
+        layoutControl = NSSegmentedControl(labels: columnLabels, trackingMode: .selectOne, target: self, action: #selector(layoutChanged(_:)))
+        layoutControl.selectedSegment = segmentIndex(for: preferences.columnCount)
         layoutControl.widthAnchor.constraint(equalToConstant: 358).isActive = true
         stack.addArrangedSubview(layoutControl)
 
@@ -97,14 +98,19 @@ final class LayoutPopoverController: NSViewController {
     }
 
     @objc private func layoutChanged(_ sender: NSSegmentedControl) {
-        preferences.columnCount = sender.selectedSegment + 5
+        guard LayoutPreferenceStore.supportedColumnCounts.indices.contains(sender.selectedSegment) else { return }
+        preferences.columnCount = LayoutPreferenceStore.supportedColumnCounts[sender.selectedSegment]
         onLayoutChanged(preferences.columnCount)
         refreshState()
     }
 
+    private func segmentIndex(for columnCount: Int) -> Int {
+        LayoutPreferenceStore.supportedColumnCounts.firstIndex(of: columnCount) ?? 0
+    }
+
     private func refreshState() {
         let count = preferences.columnCount
-        layoutControl?.selectedSegment = count - 5
+        layoutControl?.selectedSegment = segmentIndex(for: count)
         titleLabel?.stringValue = "当前布局：\(count) 列 · 选择窗口位置"
         let allowed = permissionProvider()
         permissionLabel?.stringValue = allowed ? "辅助功能权限：已开启" : "辅助功能权限：未开启，窗口无法移动"

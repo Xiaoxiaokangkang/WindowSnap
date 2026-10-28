@@ -8,7 +8,7 @@ WindowSnap 是 Swift/AppKit 菜单栏应用，不依赖第三方运行库。
 - `WindowManager.swift`：辅助功能窗口读取、移动、缩放、结果回读和桌面空间检测
 - `LayoutEngine.swift`：纯布局计算、适配判断和重试决策
 - `OptionDragController.swift`：全局拖动监听和分区浮层
-- `LayoutPopoverController.swift`：5～8 列可视化选择面板
+- `LayoutPopoverController.swift`：4～8 列可视化选择面板
 - `Shortcut.swift` / `HotKeyManager.swift`：快捷键存储与 Carbon 全局热键
 - `SettingsController.swift`：设置窗口、设备控制权限入口和登录项
 
