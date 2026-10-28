@@ -84,6 +84,16 @@ enum WindowAction: String, CaseIterable, Codable {
         allCases.first { $0.columnLayout?.index == index && $0.columnLayout?.count == count }
     }
 
+    var isShortcutConfigurable: Bool {
+        switch self {
+        case .leftThird, .centerThird, .rightThird,
+             .four1, .four2, .four3, .four4:
+            true
+        default:
+            false
+        }
+    }
+
     var menuGroup: Int {
         switch self {
         case .leftHalf, .rightHalf, .topHalf, .bottomHalf: 0

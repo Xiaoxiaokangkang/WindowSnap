@@ -21,4 +21,4 @@ WindowSnap 缺少设备控制权限。开启权限后重启应用；如果已经
 
 ## 更新应用后权限失效
 
-本地临时签名版本更新后，macOS 可能把它视为新的可执行文件。重新关闭并开启 WindowSnap 的设备控制权限即可。
+本地临时签名版本更新后，macOS 可能把它视为新的可执行文件。请退出 WindowSnap，从辅助功能列表删除旧条目，再添加并开启 `/Applications/WindowSnap.app`，然后重新启动应用。长期解决方案是使用稳定的 Developer ID 签名和 Apple 公证版本。

@@ -51,22 +51,9 @@ struct Shortcut: Codable, Equatable {
 enum ShortcutDefaults {
     static let modifier = UInt32(controlKey | optionKey)
     static let values: [WindowAction: Shortcut] = [
-        .leftHalf: .init(keyCode: UInt32(kVK_LeftArrow), modifiers: modifier),
-        .rightHalf: .init(keyCode: UInt32(kVK_RightArrow), modifiers: modifier),
-        .topHalf: .init(keyCode: UInt32(kVK_UpArrow), modifiers: modifier),
-        .bottomHalf: .init(keyCode: UInt32(kVK_DownArrow), modifiers: modifier),
-        .topLeft: .init(keyCode: UInt32(kVK_ANSI_U), modifiers: modifier),
-        .topRight: .init(keyCode: UInt32(kVK_ANSI_I), modifiers: modifier),
-        .bottomLeft: .init(keyCode: UInt32(kVK_ANSI_J), modifiers: modifier),
-        .bottomRight: .init(keyCode: UInt32(kVK_ANSI_K), modifiers: modifier),
         .leftThird: .init(keyCode: UInt32(kVK_ANSI_1), modifiers: modifier),
         .centerThird: .init(keyCode: UInt32(kVK_ANSI_2), modifiers: modifier),
-        .rightThird: .init(keyCode: UInt32(kVK_ANSI_3), modifiers: modifier),
-        .maximize: .init(keyCode: UInt32(kVK_ANSI_M), modifiers: modifier),
-        .center: .init(keyCode: UInt32(kVK_ANSI_C), modifiers: modifier),
-        .restore: .init(keyCode: UInt32(kVK_ANSI_R), modifiers: modifier),
-        .nextDisplay: .init(keyCode: UInt32(kVK_ANSI_N), modifiers: modifier),
-        .previousDisplay: .init(keyCode: UInt32(kVK_ANSI_P), modifiers: modifier)
+        .rightThird: .init(keyCode: UInt32(kVK_ANSI_3), modifiers: modifier)
     ]
 }
 
@@ -98,7 +85,7 @@ final class ShortcutStore {
         }
         shortcuts = ShortcutDefaults.values
         for (key, value) in raw {
-            if let action = WindowAction(rawValue: key), action.columnLayout == nil { shortcuts[action] = value }
+            if let action = WindowAction(rawValue: key), action.isShortcutConfigurable { shortcuts[action] = value }
         }
     }
 

@@ -42,7 +42,7 @@ final class SettingsController: NSWindowController {
     init(store: ShortcutStore, onChanged: @escaping () -> Void) {
         self.store = store
         self.onChanged = onChanged
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 630),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 520),
                               styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = "WindowSnap 设置"
         super.init(window: window)
@@ -69,7 +69,7 @@ final class SettingsController: NSWindowController {
         rows.edgeInsets = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
         rows.translatesAutoresizingMaskIntoConstraints = false
         var previousSection = ""
-        for action in WindowAction.allCases where action.columnLayout == nil {
+        for action in WindowAction.allCases where action.isShortcutConfigurable {
             let section = sectionTitle(for: action)
             if section != previousSection {
                 let header = NSTextField(labelWithString: section)
@@ -106,7 +106,7 @@ final class SettingsController: NSWindowController {
             rows.topAnchor.constraint(equalTo: scroll.contentView.topAnchor),
             rows.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor)
         ])
-        scroll.heightAnchor.constraint(equalToConstant: 430).isActive = true
+        scroll.heightAnchor.constraint(equalToConstant: 320).isActive = true
         scroll.widthAnchor.constraint(equalToConstant: 476).isActive = true
         root.addArrangedSubview(scroll)
 

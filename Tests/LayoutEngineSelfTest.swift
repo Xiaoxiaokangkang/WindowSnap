@@ -47,6 +47,9 @@ struct LayoutEngineSelfTest {
         expect(WindowAction.column(index: 0, count: 4) == .four1, "4-column first action lookup")
         expect(WindowAction.column(index: 3, count: 4) == .four4, "4-column last action lookup")
         expect(WindowAction.column(index: 4, count: 4) == nil, "4-column out-of-range lookup")
+        let configurableShortcuts = WindowAction.allCases.filter(\.isShortcutConfigurable)
+        expect(configurableShortcuts == [.leftThird, .centerThird, .rightThird, .four1, .four2, .four3, .four4], "only 3- and 4-column shortcuts are configurable")
+        expect(!WindowAction.five1.isShortcutConfigurable, "5-column shortcuts stay disabled")
 
         let exactTarget = CGRect(x: 640, y: 74, width: 640, height: 1336)
         expect(LayoutEngine.placementFits(target: exactTarget, actual: exactTarget), "exact placement fits")

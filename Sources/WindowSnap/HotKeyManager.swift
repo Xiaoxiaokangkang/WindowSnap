@@ -24,7 +24,7 @@ final class HotKeyManager {
         refs.removeAll(); actions.removeAll()
         var failures: [WindowAction] = []
         for (index, action) in WindowAction.allCases.enumerated() {
-            guard action.columnLayout == nil else { continue }
+            guard action.isShortcutConfigurable else { continue }
             guard let shortcut = values[action] else { continue }
             let id = EventHotKeyID(signature: OSType(0x57534E50), id: UInt32(index + 1)) // WSNP
             var ref: EventHotKeyRef?
