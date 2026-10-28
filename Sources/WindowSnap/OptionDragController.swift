@@ -52,6 +52,7 @@ final class OptionDragController {
     private var optionDragAttempted = false
     private var overlayVisible = false
     private var highlightedIndex: Int?
+    private var highlightedScreenFrame: CGRect?
 
     init(preferences: LayoutPreferenceStore, windowManager: WindowManager, onPermissionRequired: @escaping () -> Void) {
         self.preferences = preferences
@@ -92,6 +93,7 @@ final class OptionDragController {
             mouseDownPoint = point
             possibleWindowDrag = nil
             optionDragAttempted = false
+            windowManager.cancelColumnDrag()
         case .leftMouseDragged:
             if NSEvent.modifierFlags.contains(.option) {
                 optionDragAttempted = true
@@ -112,23 +114,27 @@ final class OptionDragController {
             if overlayVisible && !NSEvent.modifierFlags.contains(.option) { hideOverlay() }
         case .leftMouseUp:
             let selected = overlayVisible ? highlightedIndex : nil
+            let targetScreenFrame = overlayVisible ? highlightedScreenFrame : nil
             let count = preferences.columnCount
             hideOverlay()
             let needsPermission = optionDragAttempted && !windowManager.hasAccessibilityPermission
             mouseDownPoint = nil
             possibleWindowDrag = nil
             optionDragAttempted = false
-            if let selected, let action = WindowAction.column(index: selected, count: count) {
+            if let selected, let targetScreenFrame {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { [weak self] in
                     guard let self else { return }
-                    if self.windowManager.perform(action) == .accessibilityPermissionRequired {
+                    if self.windowManager.placeDraggedWindow(column: selected, count: count, in: targetScreenFrame) == .accessibilityPermissionRequired {
                         self.onPermissionRequired()
                     }
                 }
             } else if needsPermission {
+                windowManager.cancelColumnDrag()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
                     self?.onPermissionRequired()
                 }
+            } else {
+                windowManager.cancelColumnDrag()
             }
         default: break
         }
@@ -137,6 +143,7 @@ final class OptionDragController {
     private func updateOverlay(at point: NSPoint) {
         guard let screen = NSScreen.screens.first(where: { NSMouseInRect(point, $0.frame, false) }) else { return }
         let frame = screen.visibleFrame
+        highlightedScreenFrame = frame
         let count = preferences.columnCount
         if panel.frame != frame || overlayView.columnCount != count {
             panel.setFrame(frame, display: true)
@@ -155,6 +162,7 @@ final class OptionDragController {
         guard overlayVisible else { return }
         overlayVisible = false
         highlightedIndex = nil
+        highlightedScreenFrame = nil
         overlayView.highlightedIndex = nil
         panel.orderOut(nil)
     }

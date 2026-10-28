@@ -21,6 +21,7 @@ final class WindowManager: NSObject {
     private var lastExternalPID: pid_t?
     private var snappedWindowVisibility: [CGWindowID: Bool] = [:]
     private var placementGeneration: [String: Int] = [:]
+    private var draggedWindow: WindowInfo?
     private var nextPlacementGeneration = 0
     private let placementRetryDelays: [TimeInterval] = [0.08, 0.10, 0.14, 0.18, 0.24, 0.32, 0.42, 0.55]
     var issueHandler: ((WindowOperationIssue) -> Void)?
@@ -102,6 +103,34 @@ final class WindowManager: NSObject {
 
     func isPointInFocusedWindowTitleBar(_ point: NSPoint) -> Bool {
         guard AXIsProcessTrusted(), let info = focusedWindow() else { return false }
+        guard isPoint(point, inTitleBarOf: info) else { return false }
+        draggedWindow = info
+        return true
+    }
+
+    func cancelColumnDrag() {
+        draggedWindow = nil
+    }
+
+    @discardableResult
+    func placeDraggedWindow(column index: Int, count: Int, in visibleFrame: CGRect) -> WindowOperationResult {
+        guard AXIsProcessTrusted() else {
+            draggedWindow = nil
+            return .accessibilityPermissionRequired
+        }
+        guard let info = draggedWindow else { return .noFocusedWindow }
+        draggedWindow = nil
+        guard let action = WindowAction.column(index: index, count: count),
+              let target = LayoutEngine.frame(for: action, in: visibleFrame, current: info.frame) else {
+            return .unavailable
+        }
+        remember(info)
+        rememberSnappedWindow(info)
+        beginPlacement(target: target, screenWidth: visibleFrame.width, info: info)
+        return .success
+    }
+
+    private func isPoint(_ point: NSPoint, inTitleBarOf info: WindowInfo) -> Bool {
         // Unified toolbars in browsers and document apps are often taller than a classic title bar.
         let titleBarHeight = min(84, info.frame.height)
         let titleBar = CGRect(x: info.frame.minX, y: info.frame.maxY - titleBarHeight, width: info.frame.width, height: titleBarHeight)
