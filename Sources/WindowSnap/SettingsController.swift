@@ -42,9 +42,9 @@ final class SettingsController: NSWindowController {
     init(store: ShortcutStore, onChanged: @escaping () -> Void) {
         self.store = store
         self.onChanged = onChanged
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 520),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 620),
                               styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
-        window.title = "WindowSnap 设置"
+        window.title = "\(AppBuild.label) 设置"
         super.init(window: window)
         buildUI()
     }
@@ -60,6 +60,12 @@ final class SettingsController: NSWindowController {
         let heading = NSTextField(labelWithString: "快捷键")
         heading.font = .boldSystemFont(ofSize: 18)
         root.addArrangedSubview(heading)
+        let appPath = NSTextField(wrappingLabelWithString: "运行位置：\(Bundle.main.bundlePath)")
+        appPath.font = .systemFont(ofSize: 10)
+        appPath.textColor = .secondaryLabelColor
+        appPath.isSelectable = true
+        appPath.widthAnchor.constraint(equalToConstant: 476).isActive = true
+        root.addArrangedSubview(appPath)
         let note = NSTextField(wrappingLabelWithString: "点击一个快捷键按钮，然后按下新的组合键。组合键必须包含 ⌃、⌥、⇧ 或 ⌘。")
         note.textColor = .secondaryLabelColor
         root.addArrangedSubview(note)

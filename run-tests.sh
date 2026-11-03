@@ -16,6 +16,11 @@ swiftc \
   "${SWIFTC_SDK_ARGS[@]}" \
   -target "$ARCH-apple-macosx13.0" \
   "$ROOT_DIR/Sources/WindowSnap/LayoutEngine.swift" \
+  "$ROOT_DIR/Sources/WindowSnap/WindowInteractionState.swift" \
+  "$ROOT_DIR/Sources/WindowSnap/WindowPlacementRunner.swift" \
+  "$ROOT_DIR/Sources/WindowSnap/PhysicalWindowEvidence.swift" \
+  "$ROOT_DIR/Tests/PhysicalWindowEvidenceSelfTest.swift" \
+  "$ROOT_DIR/Tests/WindowPlacementRunnerSelfTest.swift" \
   "$ROOT_DIR/Tests/LayoutEngineSelfTest.swift" \
   -o "$ROOT_DIR/.build/selftest/LayoutEngineSelfTest"
 "$ROOT_DIR/.build/selftest/LayoutEngineSelfTest"

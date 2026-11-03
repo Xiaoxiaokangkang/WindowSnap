@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -15,6 +16,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        let logger = Logger(subsystem: "com.local.windowsnap", category: "Launch")
+        logger.notice("Launch \(AppBuild.label, privacy: .public) pid=\(ProcessInfo.processInfo.processIdentifier) path=\(Bundle.main.bundlePath, privacy: .public) permission=\(self.windowManager.hasAccessibilityPermission)")
+        resolveOtherInstances { [weak self] in self?.startControllers() }
+    }
+
+    private func startControllers() {
         windowManager.issueHandler = { [weak self] issue in self?.showOperationIssue(issue) }
         hotKeys.handler = { [weak self] action in self?.perform(action) }
         let initialHotKeyFailures = hotKeys.register(store.shortcuts)
@@ -49,6 +56,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
                 self?.showAccessibilityHelp()
             }
+        }
+    }
+
+    private func resolveOtherInstances(ready: @escaping @MainActor () -> Void) {
+        guard let identifier = Bundle.main.bundleIdentifier else { ready(); return }
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: identifier)
+            .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier && !$0.isTerminated }
+        guard !others.isEmpty else { ready(); return }
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "另一个 WindowSnap 正在运行"
+        alert.informativeText = "当前启动：\(AppBuild.label)\n\(Bundle.main.bundlePath)\n\n已运行：\n" + others.map {
+            let path = $0.bundleURL?.path ?? "未知路径"
+            let version = $0.bundleURL.flatMap(Bundle.init(url:))?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "未知版本"
+            return "\(version) · PID \($0.processIdentifier)\n\(path)"
+        }.joined(separator: "\n") + "\n\n同时运行会让两套分屏逻辑互相干扰。"
+        alert.addButton(withTitle: "退出本次启动")
+        alert.addButton(withTitle: "退出旧实例并使用此版本")
+        guard alert.runModal() == .alertSecondButtonReturn else { NSApp.terminate(nil); return }
+        others.forEach { _ = $0.terminate() }
+        waitForOtherInstances(others, remaining: 30, ready: ready)
+    }
+
+    private func waitForOtherInstances(_ others: [NSRunningApplication], remaining: Int,
+                                       ready: @escaping @MainActor () -> Void) {
+        if others.allSatisfy(\.isTerminated) { ready(); return }
+        guard remaining > 0 else {
+            let alert = NSAlert()
+            alert.messageText = "旧实例尚未退出"
+            alert.informativeText = "为避免两个版本同时调整窗口，本次不会启用分屏。请手动退出旧实例后重新打开新版本。"
+            alert.runModal()
+            NSApp.terminate(nil)
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.waitForOtherInstances(others, remaining: remaining - 1, ready: ready)
         }
     }
 
@@ -108,7 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateStatusItem() {
         let count = layoutPreferences.columnCount
         statusItem?.button?.title = " \(count)"
-        statusItem?.button?.toolTip = "WindowSnap · 当前 \(count) 列"
+        statusItem?.button?.toolTip = "\(AppBuild.label) · 当前 \(count) 列\n\(Bundle.main.bundlePath)"
     }
 
     private func showOperationIssue(_ issue: WindowOperationIssue) {

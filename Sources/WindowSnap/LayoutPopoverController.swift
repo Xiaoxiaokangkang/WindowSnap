@@ -111,7 +111,8 @@ final class LayoutPopoverController: NSViewController {
     private func refreshState() {
         let count = preferences.columnCount
         layoutControl?.selectedSegment = segmentIndex(for: count)
-        titleLabel?.stringValue = "当前布局：\(count) 列 · 选择窗口位置"
+        titleLabel?.stringValue = "\(AppBuild.label) · \(count) 列"
+        titleLabel?.toolTip = Bundle.main.bundlePath
         let allowed = permissionProvider()
         permissionLabel?.stringValue = allowed ? "辅助功能权限：已开启" : "辅助功能权限：未开启，窗口无法移动"
         permissionLabel?.textColor = allowed ? .systemGreen : .systemRed

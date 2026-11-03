@@ -4,6 +4,7 @@
 DerivedData/
 dist/*.app/
 dist/*.zip
+dist/backups/
 *.xcuserstate
 *.xccheckout
 *.xcworkspace/xcuserdata/

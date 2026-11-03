@@ -107,6 +107,9 @@ enum WindowAction: String, CaseIterable, Codable {
 }
 
 enum LayoutEngine {
+    static func acceptsOptionRelease(elapsed: Double, origin: CGPoint, current: CGPoint) -> Bool {
+        elapsed >= 0 && elapsed <= 0.15 && hypot(current.x - origin.x, current.y - origin.y) <= 12
+    }
     static func placementDecision(
         target: CGRect,
         actual: CGRect,

@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 
 final class ZoneOverlayView: NSView {
     var columnCount = 6 { didSet { needsDisplay = true } }
@@ -41,18 +42,22 @@ final class ZoneOverlayView: NSView {
 
 @MainActor
 final class OptionDragController {
+    private let logger = Logger(subsystem: "com.local.windowsnap", category: "Drag")
     private let preferences: LayoutPreferenceStore
     private let windowManager: WindowManager
     private let panel: NSPanel
     private let overlayView = ZoneOverlayView()
     private var monitors: [Any] = []
     private let onPermissionRequired: () -> Void
-    private var mouseDownPoint: NSPoint?
-    private var possibleWindowDrag: Bool?
+    private var interaction: Int?
+    private var possibleWindowDrag = false
     private var optionDragAttempted = false
     private var overlayVisible = false
     private var highlightedIndex: Int?
     private var highlightedScreenFrame: CGRect?
+    private var optionReleasedAt: TimeInterval?
+    private var optionReleasePoint: NSPoint?
+    private var releaseGeneration = 0
 
     init(preferences: LayoutPreferenceStore, windowManager: WindowManager, onPermissionRequired: @escaping () -> Void) {
         self.preferences = preferences
@@ -72,7 +77,8 @@ final class OptionDragController {
     private func installMonitors() {
         let mask: NSEvent.EventTypeMask = [.leftMouseDown, .leftMouseDragged, .leftMouseUp, .flagsChanged]
         if let global = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: { [weak self] event in
-            Task { @MainActor in self?.handle(event) }
+            // AppKit delivers event monitor callbacks on the main thread.
+            MainActor.assumeIsolated { self?.handle(event) }
         }) {
             monitors.append(global)
         }
@@ -85,56 +91,85 @@ final class OptionDragController {
     }
 
     private func handle(_ event: NSEvent) {
-        let point = NSEvent.mouseLocation
+        let point = screenPoint(for: event)
+        let timestamp = event.timestamp
+        let optionPressed = event.modifierFlags.contains(.option)
         switch event.type {
         case .leftMouseDown:
-            // The clicked app may not become frontmost until after mouse-down. Resolve the
-            // focused window on the first drag event instead of rejecting it too early.
-            mouseDownPoint = point
-            possibleWindowDrag = nil
+            hideOverlay()
+            interaction = windowManager.beginWindowInteraction(at: point, timestamp: timestamp)
+            possibleWindowDrag = false
             optionDragAttempted = false
-            windowManager.cancelColumnDrag()
+            optionReleasedAt = nil
+            optionReleasePoint = nil
+            releaseGeneration += 1
         case .leftMouseDragged:
-            if NSEvent.modifierFlags.contains(.option) {
+            guard let interaction, let point, windowManager.isCurrentInteraction(interaction) else {
+                hideOverlay()
+                return
+            }
+            possibleWindowDrag = windowManager.observeWindowDrag(at: point, timestamp: timestamp, interaction: interaction)
+            if optionPressed {
+                optionReleasedAt = nil
+                optionReleasePoint = nil
+                releaseGeneration += 1
                 optionDragAttempted = true
                 guard windowManager.hasAccessibilityPermission else { return }
-                if possibleWindowDrag != true {
-                    let recognized = windowManager.isPointInFocusedWindowTitleBar(point)
-                        || mouseDownPoint.map(windowManager.isPointInFocusedWindowTitleBar) == true
-                    if recognized { possibleWindowDrag = true }
-                }
-                // Do not cache a negative result. Electron apps such as Doubao can take
-                // several drag events to become the focused accessibility application.
-                guard possibleWindowDrag == true else { return }
+                guard possibleWindowDrag else { return }
                 updateOverlay(at: point)
             } else {
-                hideOverlay()
+                if !acceptsRelease(at: point, timestamp: timestamp) { hideOverlay() }
             }
         case .flagsChanged:
-            if overlayVisible && !NSEvent.modifierFlags.contains(.option) { hideOverlay() }
+            guard let interaction, windowManager.isCurrentInteraction(interaction) else { return }
+            if optionPressed {
+                optionReleasedAt = nil
+                optionReleasePoint = nil
+                releaseGeneration += 1
+            } else if overlayVisible && optionReleasedAt == nil {
+                guard let point else { hideOverlay(); return }
+                optionReleasedAt = timestamp
+                optionReleasePoint = point
+                releaseGeneration += 1
+                let generation = releaseGeneration
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) { [weak self] in
+                    guard let self, self.releaseGeneration == generation,
+                          self.windowManager.isCurrentInteraction(interaction) else { return }
+                    self.hideOverlay()
+                }
+            }
         case .leftMouseUp:
-            let selected = overlayVisible ? highlightedIndex : nil
+            logger.notice("Mouse up overlay=\(self.overlayVisible) recognized=\(self.possibleWindowDrag == true) permission=\(self.windowManager.hasAccessibilityPermission)")
+            guard let interaction else { hideOverlay(); return }
+            let releaseAccepted = point.map { optionPressed || acceptsRelease(at: $0, timestamp: timestamp) } ?? false
+            if let point, releaseAccepted, windowManager.isCurrentInteraction(interaction) {
+                // Slow apps may only publish their moved frame just before mouse-up.
+                possibleWindowDrag = windowManager.observeWindowDrag(at: point, timestamp: timestamp, interaction: interaction)
+                if possibleWindowDrag { updateOverlay(at: point) }
+            }
+            let selected = overlayVisible && possibleWindowDrag && releaseAccepted && windowManager.isCurrentInteraction(interaction) ? highlightedIndex : nil
             let targetScreenFrame = overlayVisible ? highlightedScreenFrame : nil
             let count = preferences.columnCount
             hideOverlay()
             let needsPermission = optionDragAttempted && !windowManager.hasAccessibilityPermission
-            mouseDownPoint = nil
-            possibleWindowDrag = nil
+            self.interaction = nil
+            possibleWindowDrag = false
             optionDragAttempted = false
+            optionReleasedAt = nil
+            optionReleasePoint = nil
+            releaseGeneration += 1
             if let selected, let targetScreenFrame {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { [weak self] in
-                    guard let self else { return }
-                    if self.windowManager.placeDraggedWindow(column: selected, count: count, in: targetScreenFrame) == .accessibilityPermissionRequired {
-                        self.onPermissionRequired()
-                    }
+                if windowManager.placeDraggedWindow(column: selected, count: count, in: targetScreenFrame, interaction: interaction) == .accessibilityPermissionRequired {
+                    onPermissionRequired()
                 }
             } else if needsPermission {
-                windowManager.cancelColumnDrag()
+                windowManager.cancelColumnDrag(interaction: interaction)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-                    self?.onPermissionRequired()
+                    guard let self, self.windowManager.isCurrentInteraction(interaction) else { return }
+                    self.onPermissionRequired()
                 }
             } else {
-                windowManager.cancelColumnDrag()
+                windowManager.cancelColumnDrag(interaction: interaction)
             }
         default: break
         }
@@ -156,6 +191,21 @@ final class OptionDragController {
             overlayVisible = true
             panel.orderFrontRegardless()
         }
+    }
+
+    private func screenPoint(for event: NSEvent) -> NSPoint? {
+        if let location = event.cgEvent?.location, let primary = NSScreen.screens.first {
+            return NSPoint(x: location.x, y: primary.frame.maxY - location.y)
+        }
+        if event.type != .flagsChanged, let window = event.window {
+            return window.convertPoint(toScreen: event.locationInWindow)
+        }
+        return nil
+    }
+
+    private func acceptsRelease(at point: NSPoint, timestamp: TimeInterval) -> Bool {
+        guard let releasedAt = optionReleasedAt, let origin = optionReleasePoint else { return false }
+        return LayoutEngine.acceptsOptionRelease(elapsed: timestamp - releasedAt, origin: origin, current: point)
     }
 
     private func hideOverlay() {
